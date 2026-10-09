@@ -134,11 +134,9 @@ function identificationsLeft() {
 }
 
 function cleanKey(value) {
-  let text = String(value || "").replace(/[\uFEFF\u200B-\u200D]/g, "");
-  text = text.replace(/\s+/g, "");
-  const found = text.match(/2b10[A-Za-z0-9_-]{8,}/);
-  if (found) return found[0];
-  return text.replace(/^api-key[:=]/i, "").replace(/^["']+|["']+$/g, "");
+  return String(value || "")
+    .replace(/[\uFEFF\u200B-\u200D]/g, "")
+    .replace(/\s+/g, "");
 }
 
 function apiKey() {
@@ -631,6 +629,7 @@ async function plantnetRequest(path, options) {
     headers,
     cache: "no-store",
     credentials: "omit",
+    referrerPolicy: "no-referrer",
   });
   const data = await response.json().catch(() => ({}));
   return { status: response.status, data };
@@ -648,11 +647,8 @@ function explainAccess(status, data) {
   const said = data && data.message ? " Pl@ntNet said \"" + data.message + ".\"" : "";
   if (status === 200) return { short: "This page is allowed. The key works.", long: "This page is allowed. The key works." };
   if (status === 401) {
-    const shape = apiKey().indexOf("2b10") === 0
-      ? " The links are already saved. This refusal is about the code, not those links."
-      : " A Pl@ntNet key starts with 2b10. Select the whole API key box, copy it, and paste it here again.";
-    const long = "Pl@ntNet refused the code." + said + " " + keySummary() + shape + " On the API key page, turn on expose my API key, put each line below under Authorized domains, then tap Update key settings.";
-    return { short: "Pl@ntNet refused the code. See Guide.", long };
+    const long = "Pl@ntNet refused this code." + said + " " + keySummary() + " Every one of those characters was sent. The domain links are not what failed this time.";
+    return { short: "Sent " + apiKey().length + " characters. Pl@ntNet refused them.", long };
   }
   const long = pageBlockedMessage();
   return { short: "Pl@ntNet blocked this page. See Guide.", long };
