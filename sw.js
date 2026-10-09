@@ -1,4 +1,4 @@
-const CACHE_NAME = "plants-app-v20261008e";
+const CACHE_NAME = "plants-app-v20261008f";
 const PRECACHE = [
   "./",
   "./index.html",

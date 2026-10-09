@@ -42,6 +42,15 @@ h1 { margin: 8px 0; font-family: Georgia, serif; font-size: 32px; font-weight: 6
 h2 { margin: 22px 0 8px; font-size: 20px; }
 .lead, .hint { color: var(--muted); line-height: 1.45; }
 .quota { color: var(--deep); font-weight: 650; }
+.domain {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+  font-family: ui-monospace, Consolas, monospace;
+  word-break: break-all;
+}
 label { display: grid; gap: 6px; margin: 12px 0; font-size: 14px; color: var(--muted); }
 input, textarea, select {
   width: 100%;

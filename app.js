@@ -133,8 +133,16 @@ function identificationsLeft() {
   return Math.max(0, Math.min(localLeft, Number(entry.remaining)));
 }
 
+function cleanKey(value) {
+  return String(value || "")
+    .trim()
+    .replace(/^api-key\s*:\s*/i, "")
+    .replace(/^["']|["']$/g, "")
+    .replace(/\s+/g, "");
+}
+
 function apiKey() {
-  return (localStorage.getItem("plants-api-key") || "").trim();
+  return cleanKey(localStorage.getItem("plants-api-key") || "");
 }
 
 function say(text) {
@@ -393,6 +401,7 @@ function organLabel(organ) {
 
 function renderGuide() {
   $("api-key").value = apiKey();
+  $("allowed-domain").textContent = location.origin;
   $("guide-quota").textContent = "Free identifications left today: " + identificationsLeft() + " of " + DAILY_LIMIT + ".";
   $("credit-copy").textContent = CREDIT;
 }
@@ -628,8 +637,14 @@ async function identify() {
     const response = await fetch(url, { method: "POST", body });
     const data = await response.json().catch(() => ({}));
     if (response.ok || response.status === 429) noteQuotaFromResponse(data, response.status);
-    if (response.status === 401 || response.status === 403) {
-      say("That Pl@ntNet key was not accepted. Check the key in Guide.");
+    if (response.status === 401) {
+      say("That key was not accepted. Copy the private key again from the Pl@ntNet API key page.");
+      show("guide");
+      return;
+    }
+    if (response.status === 403) {
+      say("Pl@ntNet blocked this page. Turn on expose my API key, add " + location.origin + " under Authorized domains, save there, then try again.");
+      show("guide");
       return;
     }
     if (response.status === 429) {
@@ -738,7 +753,8 @@ function bind() {
   $("plant-common").addEventListener("change", () => suggestCareFromNames());
   $("plant-scientific").addEventListener("change", () => suggestCareFromNames());
   $("save-key").addEventListener("click", () => {
-    const key = $("api-key").value.trim();
+    const key = cleanKey($("api-key").value);
+    $("api-key").value = key;
     if (key) localStorage.setItem("plants-api-key", key);
     else localStorage.removeItem("plants-api-key");
     say(key ? "Key saved on this phone." : "Key removed from this phone.");
