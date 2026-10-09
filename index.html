@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>WizX Plants</title>
+    <meta name="description" content="Identify a plant with Pl@ntNet and keep your collection, photos, and watering schedule on this phone." />
+    <meta name="theme-color" content="#143028" />
+    <meta name="application-name" content="WizX Plants" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Plants" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon-32.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="./styles.css?v=20261008e" />
+  </head>
+  <body>
+    <!--
+      WizX Plants. Separate from WizX Studio.
+      How to is the Guide screen: Pl@ntNet key, 500 a day, credit line,
+      identify, save a plant, watering, photos, phone home screen.
+    -->
+    <div class="app">
+      <header class="top">
+        <div>
+          <p class="brand">WizX Plants</p>
+          <p class="credit-line">created by WizX Creations</p>
+        </div>
+        <p id="status" class="status" aria-live="polite"></p>
+      </header>
+
+      <main>
+        <section class="screen" data-screen="today">
+          <h1>Today</h1>
+          <p class="lead" id="today-lead">Plants that need water show up here.</p>
+          <div id="today-list" class="stack"></div>
+        </section>
+
+        <section class="screen" data-screen="collection" hidden>
+          <h1>My plants</h1>
+          <label class="search">Search
+            <input id="search" type="search" placeholder="Name or place" autocomplete="off" />
+          </label>
+          <div class="chips" role="group" aria-label="Which plants">
+            <button type="button" class="chip is-on" data-filter="all">All</button>
+            <button type="button" class="chip" data-filter="thirsty">Thirsty</button>
+          </div>
+          <button type="button" class="btn" id="add-manual">Add a plant by name</button>
+          <div id="collection-list" class="cards"></div>
+        </section>
+
+        <section class="screen" data-screen="identify" hidden>
+          <h1>Identify</h1>
+          <p class="lead">Take up to 5 photos of one plant. Leaf, flower, fruit, or bark. One check can use all of them.</p>
+          <p id="quota-line" class="quota"></p>
+          <p id="key-line" class="hint"></p>
+          <div class="row">
+            <label class="btn">Add a photo
+              <input id="shot-input" type="file" accept="image/jpeg,image/png,image/*" capture="environment" hidden />
+            </label>
+            <label>This photo is a
+              <select id="shot-organ">
+                <option value="auto">Let Pl@ntNet decide</option>
+                <option value="leaf">Leaf</option>
+                <option value="flower">Flower</option>
+                <option value="fruit">Fruit</option>
+                <option value="bark">Bark</option>
+              </select>
+            </label>
+          </div>
+          <div id="shot-list" class="shots"></div>
+          <button type="button" class="btn solid" id="identify-go">Identify this plant</button>
+          <p class="hint">Identify uses 1 of the 500 free Pl@ntNet checks for today. Extra photos of this same plant still count as one check.</p>
+          <div id="match-list" class="stack"></div>
+        </section>
+
+        <section class="screen" data-screen="plant" hidden>
+          <button type="button" class="text-btn" id="plant-back">Back</button>
+          <h1 id="plant-heading">Plant</h1>
+          <div id="plant-photos" class="shots"></div>
+          <p id="plant-score" class="hint"></p>
+          <label>Name you use<input id="plant-common" type="text" maxlength="80" autocomplete="off" /></label>
+          <label>Scientific name<input id="plant-scientific" type="text" maxlength="120" autocomplete="off" /></label>
+          <label>Family<input id="plant-family" type="text" maxlength="80" autocomplete="off" /></label>
+          <label>Where it lives<input id="plant-place" type="text" maxlength="80" placeholder="Kitchen window, yard, pot on the step" autocomplete="off" /></label>
+          <label>Light
+            <select id="plant-light">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="bright">Bright</option>
+            </select>
+          </label>
+          <label>Water every
+            <input id="plant-every" type="number" min="1" max="60" step="1" />
+            days
+          </label>
+          <p id="plant-next" class="next-water"></p>
+          <div class="row">
+            <button type="button" class="btn solid" id="plant-water">Watered</button>
+            <button type="button" class="btn" id="plant-undo-water">Undo watering</button>
+          </div>
+          <label>Soil and pot<textarea id="plant-soil" rows="2"></textarea></label>
+          <label>Care<textarea id="plant-care" rows="4"></textarea></label>
+          <label>Pets<textarea id="plant-pet" rows="2"></textarea></label>
+          <label>Notes<textarea id="plant-notes" rows="3"></textarea></label>
+          <p id="plant-more" class="hint"></p>
+          <div class="row">
+            <button type="button" class="btn solid" id="plant-save">Save plant</button>
+            <button type="button" class="btn danger" id="plant-delete">Remove</button>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="guide" hidden>
+          <h1>Guide</h1>
+          <h2>Pl@ntNet key</h2>
+          <p>Create one free account at <a href="https://my.plantnet.org/" target="_blank" rel="noopener">my.plantnet.org</a>. Open the API key page, then paste the key here. It stays on this phone and is sent only to Pl@ntNet.</p>
+          <label>API key
+            <input id="api-key" type="password" autocomplete="off" spellcheck="false" />
+          </label>
+          <button type="button" class="btn solid" id="save-key">Save key</button>
+          <h2>Free limit</h2>
+          <p>Pl@ntNet allows 500 identifications a day on one free account. This app counts each check and stops at 500 so the free allowance is not passed. Adding a plant by name does not use a check. You can still water plants and edit notes after the limit is reached.</p>
+          <p id="guide-quota" class="quota"></p>
+          <h2>How to use it</h2>
+          <ol class="steps">
+            <li>Paste the Pl@ntNet key above.</li>
+            <li>On Identify, add a photo of one plant. A leaf and a flower together make a better check.</li>
+            <li>Pick the name that fits, then save the plant. The photo stays on this phone.</li>
+            <li>Read the care note and set how many days between waterings. Change it after you see how the soil feels.</li>
+            <li>Today lists plants that are due. Tap Watered when you water them.</li>
+            <li>On iPhone, open https://eagleye869.github.io/wizx-plants/ in Safari, then Share, then Add to Home Screen. After that, the plants, photos, and key stay on the phone. The computer does not have to stay on. Naming a plant still needs the internet, because that check goes to Pl@ntNet.</li>
+          </ol>
+          <h2>Credit</h2>
+          <p id="credit-copy"></p>
+        </section>
+      </main>
+
+      <footer class="plantnet">
+        <a href="https://my.plantnet.org/" target="_blank" rel="noopener">
+          <img src="https://my.plantnet.org/images/powered-by-plantnet-dark.png" alt="Pl@ntNet" width="168" height="48" />
+        </a>
+        <p id="credit-footer"></p>
+      </footer>
+
+      <nav class="nav">
+        <button type="button" data-go="today" class="is-on">Today</button>
+        <button type="button" data-go="collection">My plants</button>
+        <button type="button" data-go="identify">Identify</button>
+        <button type="button" data-go="guide">Guide</button>
+      </nav>
+    </div>
+    <script src="./app.js?v=20261008e"></script>
+  </body>
+</html>
