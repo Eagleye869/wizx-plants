@@ -608,6 +608,27 @@ function noteQuotaFromResponse(data, status) {
   saveQuota(entry);
 }
 
+function pageBlockedMessage() {
+  return "Pl@ntNet is hiding the answer from this page. On the API key page, turn on expose my API key. Under Authorized domains, add " + location.origin + " on its own line, then save there and tap Save key.";
+}
+
+async function checkAccess() {
+  const response = await fetch("https://my-api.plantnet.org/v2/quota?api-key=" + encodeURIComponent(apiKey()), {
+    method: "GET",
+    cache: "no-store",
+    credentials: "omit",
+  });
+  const data = await response.json().catch(() => ({}));
+  return { status: response.status, data };
+}
+
+function explainAccess(status) {
+  if (status === 200) return "This page is allowed. The key works.";
+  if (status === 401) return "That key was not accepted. Copy the private key again from the Pl@ntNet API key page.";
+  if (status === 403) return pageBlockedMessage();
+  return pageBlockedMessage();
+}
+
 async function identify() {
   if (busy) return;
   if (!apiKey()) {
@@ -626,24 +647,34 @@ async function identify() {
   }
   busy = true;
   renderIdentify();
-  say("Asking Pl@ntNet...");
-  const body = new FormData();
-  for (const shot of shots) {
-    body.append("images", shot.blob, "plant.jpg");
-    body.append("organs", shot.organ || "auto");
-  }
-  const url = "https://my-api.plantnet.org/v2/identify/all?api-key=" + encodeURIComponent(apiKey()) + "&lang=en&nb-results=5";
+  say("Checking this page with Pl@ntNet...");
   try {
-    const response = await fetch(url, { method: "POST", body });
-    const data = await response.json().catch(() => ({}));
-    if (response.ok || response.status === 429) noteQuotaFromResponse(data, response.status);
-    if (response.status === 401) {
-      say("That key was not accepted. Copy the private key again from the Pl@ntNet API key page.");
+    let access;
+    try {
+      access = await checkAccess();
+    } catch {
+      say(pageBlockedMessage());
       show("guide");
       return;
     }
-    if (response.status === 403) {
-      say("Pl@ntNet blocked this page. Turn on expose my API key, add " + location.origin + " under Authorized domains, save there, then try again.");
+    if (access.status !== 200) {
+      say(explainAccess(access.status));
+      if (access.status === 401 || access.status === 403) show("guide");
+      return;
+    }
+    say("Asking Pl@ntNet...");
+    const body = new FormData();
+    for (const shot of shots) {
+      const file = new File([shot.blob], "plant.jpg", { type: "image/jpeg" });
+      body.append("images", file);
+      body.append("organs", shot.organ || "auto");
+    }
+    const url = "https://my-api.plantnet.org/v2/identify/all?api-key=" + encodeURIComponent(apiKey()) + "&lang=en&nb-results=5";
+    const response = await fetch(url, { method: "POST", body, cache: "no-store", credentials: "omit" });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok || response.status === 429) noteQuotaFromResponse(data, response.status);
+    if (response.status === 401 || response.status === 403) {
+      say(explainAccess(response.status));
       show("guide");
       return;
     }
@@ -660,7 +691,7 @@ async function identify() {
       : "Pick the name that fits this plant.");
     renderMatches(data.results);
   } catch {
-    say("The phone could not reach Pl@ntNet. Check the internet and try again. This check was not counted.");
+    say("The photo did not go through. Try one closer photo of a leaf or flower.");
   } finally {
     busy = false;
     renderIdentify();
@@ -752,13 +783,23 @@ function bind() {
   });
   $("plant-common").addEventListener("change", () => suggestCareFromNames());
   $("plant-scientific").addEventListener("change", () => suggestCareFromNames());
-  $("save-key").addEventListener("click", () => {
+  $("save-key").addEventListener("click", async () => {
     const key = cleanKey($("api-key").value);
     $("api-key").value = key;
     if (key) localStorage.setItem("plants-api-key", key);
     else localStorage.removeItem("plants-api-key");
-    say(key ? "Key saved on this phone." : "Key removed from this phone.");
     renderGuide();
+    if (!key) {
+      say("Key removed from this phone.");
+      return;
+    }
+    say("Checking this page with Pl@ntNet...");
+    try {
+      const access = await checkAccess();
+      say(explainAccess(access.status));
+    } catch {
+      say(pageBlockedMessage());
+    }
   });
   $("credit-footer").textContent = CREDIT;
 }
