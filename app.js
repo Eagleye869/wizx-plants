@@ -134,12 +134,15 @@ function identificationsLeft() {
 }
 
 function cleanKey(value) {
-  let key = String(value || "").replace(/^\uFEFF/, "").trim();
-  key = key.replace(/^api-key\s*:\s*/i, "");
-  key = key.replace(/^["']+|["']+$/g, "");
-  const found = key.match(/2b10[A-Za-z0-9]+/);
-  if (found) return found[0];
-  return key.replace(/\s+/g, "");
+  let key = String(value || "").replace(/[\uFEFF\u200B-\u200D]/g, "").trim();
+  key = key.replace(/^api-key\s*[:=]\s*/i, "");
+  key = key.replace(/^["']+|["']+$/g, "").trim();
+  const parts = key.split(/\s+/).filter(Boolean);
+  if (parts.length > 1) {
+    parts.sort((a, b) => b.length - a.length);
+    return parts[0];
+  }
+  return key;
 }
 
 function apiKey() {
@@ -365,7 +368,7 @@ function renderIdentify() {
   const left = identificationsLeft();
   $("quota-line").textContent = "Free identifications left today: " + left + " of " + DAILY_LIMIT + ".";
   $("key-line").textContent = apiKey()
-    ? "Key saved on this phone. It ends in " + apiKey().slice(-4) + "."
+    ? "Key saved. " + apiKey().length + " characters, ending in " + apiKey().slice(-4) + "."
     : "Add your Pl@ntNet key in Guide before the first check.";
   const host = $("shot-list");
   host.replaceChildren();
@@ -609,29 +612,68 @@ function noteQuotaFromResponse(data, status) {
   saveQuota(entry);
 }
 
-function pageBlockedMessage() {
-  return "Pl@ntNet is hiding the answer from this page. On the API key page, turn on expose my API key. Under Authorized domains, add " + location.origin + " on its own line, then save there and tap Save key.";
+function reportKey(shortText, longText) {
+  const line = $("key-result");
+  if (line) line.textContent = longText || shortText || "";
+  say(shortText || "");
+}
+
+function keySummary() {
+  const key = apiKey();
+  if (!key) return "No code is saved.";
+  return "This phone sent " + key.length + " characters, ending in " + key.slice(-4) + ".";
+}
+
+async function plantnetRequest(path, options) {
+  const key = apiKey();
+  const preferred = localStorage.getItem("plants-auth-style") === "bearer" ? "bearer" : "query";
+  const styles = preferred === "bearer" ? ["bearer", "query"] : ["query", "bearer"];
+  let last = null;
+  for (const style of styles) {
+    const headers = Object.assign({}, options && options.headers);
+    let url = "https://my-api.plantnet.org" + path;
+    if (style === "query") {
+      url += (url.includes("?") ? "&" : "?") + "api-key=" + encodeURIComponent(key);
+    } else {
+      headers.Authorization = "Bearer " + key;
+    }
+    const response = await fetch(url, {
+      method: (options && options.method) || "GET",
+      body: options && options.body,
+      headers,
+      cache: "no-store",
+      credentials: "omit",
+    });
+    const data = await response.json().catch(() => ({}));
+    last = { status: response.status, data, style };
+    if (response.status !== 401) {
+      if (response.ok) localStorage.setItem("plants-auth-style", style);
+      return last;
+    }
+  }
+  return last;
 }
 
 async function checkAccess() {
-  const response = await fetch("https://my-api.plantnet.org/v2/quota?api-key=" + encodeURIComponent(apiKey()), {
-    method: "GET",
-    cache: "no-store",
-    credentials: "omit",
-  });
-  const data = await response.json().catch(() => ({}));
-  return { status: response.status, data };
+  return plantnetRequest("/v2/languages");
+}
+
+function pageBlockedMessage() {
+  return "Pl@ntNet is hiding the answer from this page. Turn on expose my API key, add " + location.origin + " under Authorized domains, then tap Update key settings.";
 }
 
 function explainAccess(status) {
-  if (status === 200) return "This page is allowed. The key works.";
+  if (status === 200) return { short: "This page is allowed. The key works.", long: "This page is allowed. The key works." };
   if (status === 401) {
-    const end = apiKey().slice(-4);
-    const tail = end ? " The saved code ends in " + end + "." : "";
-    return "Pl@ntNet refused this code." + tail + " On the API key page, copy only the box labeled API key. It starts with 2b10 and should end the same way. If it already does, tap Generate new API key there, copy the new code, and paste it here.";
+    const long = "Pl@ntNet refused the code. " + keySummary() + " On the API key page, turn on expose my API key, add " + location.origin + " under Authorized domains, then tap Update key settings. Copy the whole API key box again. It should be the same number of characters. Paste it here and tap Save key.";
+    return { short: "Pl@ntNet refused the code. See Guide.", long };
   }
-  if (status === 403) return pageBlockedMessage();
-  return pageBlockedMessage();
+  if (status === 403) {
+    const long = pageBlockedMessage();
+    return { short: "Pl@ntNet blocked this page. See Guide.", long };
+  }
+  const long = pageBlockedMessage();
+  return { short: "Pl@ntNet blocked this page. See Guide.", long };
 }
 
 async function identify() {
@@ -658,13 +700,14 @@ async function identify() {
     try {
       access = await checkAccess();
     } catch {
-      say(pageBlockedMessage());
+      reportKey("Pl@ntNet blocked this page. See Guide.", pageBlockedMessage());
       show("guide");
       return;
     }
     if (access.status !== 200) {
-      say(explainAccess(access.status));
-      if (access.status === 401 || access.status === 403) show("guide");
+      const explained = explainAccess(access.status);
+      reportKey(explained.short, explained.long);
+      show("guide");
       return;
     }
     say("Asking Pl@ntNet...");
@@ -674,20 +717,20 @@ async function identify() {
       body.append("images", file);
       body.append("organs", shot.organ || "auto");
     }
-    const url = "https://my-api.plantnet.org/v2/identify/all?api-key=" + encodeURIComponent(apiKey()) + "&lang=en&nb-results=5";
-    const response = await fetch(url, { method: "POST", body, cache: "no-store", credentials: "omit" });
-    const data = await response.json().catch(() => ({}));
-    if (response.ok || response.status === 429) noteQuotaFromResponse(data, response.status);
-    if (response.status === 401 || response.status === 403) {
-      say(explainAccess(response.status));
+    const sent = await plantnetRequest("/v2/identify/all?lang=en&nb-results=5", { method: "POST", body });
+    const data = sent.data || {};
+    if (sent.status === 200 || sent.status === 429) noteQuotaFromResponse(data, sent.status);
+    if (sent.status === 401 || sent.status === 403) {
+      const explained = explainAccess(sent.status);
+      reportKey(explained.short, explained.long);
       show("guide");
       return;
     }
-    if (response.status === 429) {
+    if (sent.status === 429) {
       say("Pl@ntNet has no free identifications left today. Try again tomorrow.");
       return;
     }
-    if (!response.ok || !data.results || !data.results.length) {
+    if (sent.status !== 200 || !data.results || !data.results.length) {
       say("Pl@ntNet did not return a plant. Try a closer photo of the leaf or flower, with one plant in the frame.");
       return;
     }
@@ -795,15 +838,16 @@ function bind() {
     else localStorage.removeItem("plants-api-key");
     renderGuide();
     if (!key) {
-      say("Key removed from this phone.");
+      reportKey("Key removed from this phone.");
       return;
     }
     say("Checking this page with Pl@ntNet...");
     try {
       const access = await checkAccess();
-      say(explainAccess(access.status));
+      const explained = explainAccess(access.status);
+      reportKey(explained.short, explained.long);
     } catch {
-      say(pageBlockedMessage());
+      reportKey("Pl@ntNet blocked this page. See Guide.", pageBlockedMessage());
     }
   });
   $("credit-footer").textContent = CREDIT;

@@ -1,4 +1,4 @@
-const CACHE_NAME = "plants-app-v20261008h";
+const CACHE_NAME = "plants-app-v20261008i";
 const PRECACHE = [
   "./",
   "./index.html",
@@ -28,13 +28,10 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== "GET" || url.origin !== self.location.origin) return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        return response;
-      }).catch(() => caches.match("./index.html"));
-    })
+    fetch(event.request).then((response) => {
+      const copy = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+      return response;
+    }).catch(() => caches.match(event.request).then((cached) => cached || caches.match("./index.html")))
   );
 });
