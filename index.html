@@ -14,14 +14,14 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icons/icon-32.png" type="image/png" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./styles.css?v=20261008g" />
+    <link rel="stylesheet" href="./styles.css?v=20261008h" />
   </head>
   <body>
     <!--
       WizX Plants. Separate from WizX Studio.
-      How to is the Guide screen: Pl@ntNet key, expose the key,
-      authorized domain, key check, 500 a day, credit line, identify,
-      save a plant, watering, photos, phone home screen.
+      How to is the Guide screen: Pl@ntNet key, copy the 2b10 code,
+      expose the key, authorized domain, key check, 500 a day, credit line,
+      identify, save a plant, watering, photos, phone home screen.
     -->
     <div class="app">
       <header class="top">
@@ -119,9 +119,9 @@
           <p>Create one free account at <a href="https://my.plantnet.org/settings/api-key" target="_blank" rel="noopener">my.plantnet.org</a>. Open the API key page and copy the private key.</p>
           <p>On that same page, turn on <strong>expose my API key</strong>. Under Authorized domains, add this line, then save there:</p>
           <p id="allowed-domain" class="domain"></p>
-          <p>Paste the key here and tap Save key. The app will say whether this page is allowed. The key stays on this phone and is sent only to Pl@ntNet.</p>
+          <p>Copy only the code in the box labeled <strong>API key</strong>. It starts with 2b10. Paste that code here, where you can read it, then tap Save key. Leave Generate new API key alone until this phone says the saved code was refused.</p>
           <label>API key
-            <input id="api-key" type="password" autocomplete="off" spellcheck="false" />
+            <input id="api-key" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text" />
           </label>
           <button type="button" class="btn solid" id="save-key">Save key</button>
           <h2>Free limit</h2>
@@ -129,7 +129,7 @@
           <p id="guide-quota" class="quota"></p>
           <h2>How to use it</h2>
           <ol class="steps">
-            <li>Paste the Pl@ntNet key above.</li>
+            <li>Copy the API key box from the Pl@ntNet page. It starts with 2b10. Paste it above and tap Save key.</li>
             <li>On Identify, add a photo of one plant. A leaf and a flower together make a better check.</li>
             <li>Pick the name that fits, then save the plant. The photo stays on this phone.</li>
             <li>Read the care note and set how many days between waterings. Change it after you see how the soil feels.</li>
@@ -155,6 +155,6 @@
         <button type="button" data-go="guide">Guide</button>
       </nav>
     </div>
-    <script src="./app.js?v=20261008g"></script>
+    <script src="./app.js?v=20261008h"></script>
   </body>
 </html>

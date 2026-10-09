@@ -134,11 +134,12 @@ function identificationsLeft() {
 }
 
 function cleanKey(value) {
-  return String(value || "")
-    .trim()
-    .replace(/^api-key\s*:\s*/i, "")
-    .replace(/^["']|["']$/g, "")
-    .replace(/\s+/g, "");
+  let key = String(value || "").replace(/^\uFEFF/, "").trim();
+  key = key.replace(/^api-key\s*:\s*/i, "");
+  key = key.replace(/^["']+|["']+$/g, "");
+  const found = key.match(/2b10[A-Za-z0-9]+/);
+  if (found) return found[0];
+  return key.replace(/\s+/g, "");
 }
 
 function apiKey() {
@@ -364,7 +365,7 @@ function renderIdentify() {
   const left = identificationsLeft();
   $("quota-line").textContent = "Free identifications left today: " + left + " of " + DAILY_LIMIT + ".";
   $("key-line").textContent = apiKey()
-    ? "Pl@ntNet key is saved on this phone."
+    ? "Key saved on this phone. It ends in " + apiKey().slice(-4) + "."
     : "Add your Pl@ntNet key in Guide before the first check.";
   const host = $("shot-list");
   host.replaceChildren();
@@ -624,7 +625,11 @@ async function checkAccess() {
 
 function explainAccess(status) {
   if (status === 200) return "This page is allowed. The key works.";
-  if (status === 401) return "That key was not accepted. Copy the private key again from the Pl@ntNet API key page.";
+  if (status === 401) {
+    const end = apiKey().slice(-4);
+    const tail = end ? " The saved code ends in " + end + "." : "";
+    return "Pl@ntNet refused this code." + tail + " On the API key page, copy only the box labeled API key. It starts with 2b10 and should end the same way. If it already does, tap Generate new API key there, copy the new code, and paste it here.";
+  }
   if (status === 403) return pageBlockedMessage();
   return pageBlockedMessage();
 }
