@@ -405,7 +405,7 @@ function organLabel(organ) {
 
 function renderGuide() {
   $("api-key").value = apiKey();
-  $("allowed-domain").textContent = location.origin;
+  $("allowed-domain").textContent = [location.origin, location.origin + "/wizx-plants", location.origin + "/wizx-plants/"].join("\n");
   $("guide-quota").textContent = "Free identifications left today: " + identificationsLeft() + " of " + DAILY_LIMIT + ".";
   $("credit-copy").textContent = CREDIT;
 }
@@ -621,7 +621,7 @@ function reportKey(shortText, longText) {
 function keySummary() {
   const key = apiKey();
   if (!key) return "No code is saved.";
-  return "This phone sent " + key.length + " characters, ending in " + key.slice(-4) + ".";
+  return "The saved code is " + key.length + " characters. It starts with " + key.slice(0, 4) + " and ends with " + key.slice(-4) + ".";
 }
 
 async function plantnetRequest(path, options) {
@@ -662,15 +662,15 @@ function pageBlockedMessage() {
   return "Pl@ntNet is hiding the answer from this page. Turn on expose my API key, add " + location.origin + " under Authorized domains, then tap Update key settings.";
 }
 
-function explainAccess(status) {
+function explainAccess(status, data) {
+  const said = data && data.message ? " Pl@ntNet said \"" + data.message + ".\"" : "";
   if (status === 200) return { short: "This page is allowed. The key works.", long: "This page is allowed. The key works." };
   if (status === 401) {
-    const long = "Pl@ntNet refused the code. " + keySummary() + " On the API key page, turn on expose my API key, add " + location.origin + " under Authorized domains, then tap Update key settings. Copy the whole API key box again. It should be the same number of characters. Paste it here and tap Save key.";
+    const shape = apiKey().indexOf("2b10") === 0
+      ? " That shape matches a Pl@ntNet key. Pl@ntNet uses this same refusal when the page is missing from Authorized domains."
+      : " A Pl@ntNet key starts with 2b10. This saved text does not, so it is not the API key box.";
+    const long = "Pl@ntNet refused the code." + said + " " + keySummary() + shape + " On the API key page, turn on expose my API key, put each line below under Authorized domains, then tap Update key settings.";
     return { short: "Pl@ntNet refused the code. See Guide.", long };
-  }
-  if (status === 403) {
-    const long = pageBlockedMessage();
-    return { short: "Pl@ntNet blocked this page. See Guide.", long };
   }
   const long = pageBlockedMessage();
   return { short: "Pl@ntNet blocked this page. See Guide.", long };
@@ -705,7 +705,7 @@ async function identify() {
       return;
     }
     if (access.status !== 200) {
-      const explained = explainAccess(access.status);
+      const explained = explainAccess(access.status, access.data);
       reportKey(explained.short, explained.long);
       show("guide");
       return;
@@ -721,7 +721,7 @@ async function identify() {
     const data = sent.data || {};
     if (sent.status === 200 || sent.status === 429) noteQuotaFromResponse(data, sent.status);
     if (sent.status === 401 || sent.status === 403) {
-      const explained = explainAccess(sent.status);
+      const explained = explainAccess(sent.status, sent.data);
       reportKey(explained.short, explained.long);
       show("guide");
       return;
@@ -844,7 +844,7 @@ function bind() {
     say("Checking this page with Pl@ntNet...");
     try {
       const access = await checkAccess();
-      const explained = explainAccess(access.status);
+      const explained = explainAccess(access.status, access.data);
       reportKey(explained.short, explained.long);
     } catch {
       reportKey("Pl@ntNet blocked this page. See Guide.", pageBlockedMessage());
